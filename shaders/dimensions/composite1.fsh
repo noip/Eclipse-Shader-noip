@@ -1529,7 +1529,11 @@ void main() {
 
 				if(isGrass) SkylightDir = 1.0;
 				
-				SkylightDir = clamp(SkylightDir*0.7+0.3, 0.0, pow(1-pow(1-SSAO_SSS.x, 0.5),4.0) * 0.7 + 0.3);
+				#if indirect_effect == VANILLA_AO
+					SkylightDir = clamp(SkylightDir*0.7+0.3, 0.0, pow(1.0-pow(vanilla_AO, 2.0),4.0) * 0.7 + 0.3);
+				#else
+					SkylightDir = clamp(SkylightDir*0.7+0.3, 0.0, pow(1.0-pow(1.0-SSAO_SSS.x, 0.5),4.0) * 0.7 + 0.3);
+				#endif
 
 				skylight = mix(0.08 + 0.92*(1.0-lightmap.y), 1.0, SkylightDir);
 
