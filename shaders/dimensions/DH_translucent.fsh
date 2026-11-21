@@ -68,6 +68,7 @@ uniform mat4 gbufferPreviousModelView;
 
 
 uniform int frameCounter;
+uniform vec3 OVERDRAW_PREVENTION_SCALE;
 
 
 // uniform sampler2D colortex4;
@@ -313,7 +314,8 @@ if (gl_FragCoord.x * texelSize.x < 1.0  && gl_FragCoord.y * texelSize.y < 1.0 )	
 			float maxOverdrawDistance = OVERDRAW_MAX_DISTANCE;
 		#endif
 
-        if(viewDist < clamp(far-16*4, 16, maxOverdrawDistance) ){ discard; return;}
+        float velocity = clamp(1.0 - length(OVERDRAW_PREVENTION_SCALE),1e-6,1.0);
+        if(viewDist < clamp(far-16.0*4.0, 16.0, maxOverdrawDistance)*velocity ){ discard; return;}
     #endif
 
 	vec3 waterNormals = worldSpaceNormals;
@@ -484,9 +486,13 @@ if (gl_FragCoord.x * texelSize.x < 1.0  && gl_FragCoord.y * texelSize.y < 1.0 )	
 		// gl_FragData[0].rgb = normals*0.1;
     
     #ifdef DH_OVERDRAW_PREVENTION
-        float distancefade = min(max(1.0 - viewDist/clamp(far-16*4, 16, maxOverdrawDistance),0.0)*5,1.0);
+        float distancefade = min(max(1.0 - viewDist/(clamp(far-16.0*4.0, 16.0, maxOverdrawDistance)*velocity),0.0)*5.0,1.0);
 
         if(texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x < 1.0 ||  distancefade > 0.0){
+            discard;
+        }
+    #else
+        if(texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).x < 1.0){
             discard;
         }
     #endif

@@ -12,6 +12,7 @@ uniform sampler2D depthtex1;
 uniform mat4 gbufferModelViewInverse;
 uniform float far;
 uniform int frameCounter;
+uniform vec3 OVERDRAW_PREVENTION_SCALE;
 
 vec3 toLinear(vec3 sRGB){
 	return sRGB * (sRGB * (sRGB * 0.305306011 + 0.682171111) + 0.012522878);
@@ -41,7 +42,10 @@ if (gl_FragCoord.x * texelSize.x < 1.0  && gl_FragCoord.y * texelSize.y < 1.0 )	
 			float maxOverdrawDistance = OVERDRAW_MAX_DISTANCE;
 		#endif
 
-        if(length(playerPos) < clamp(far-16*4, 16, maxOverdrawDistance) || texelFetch(depthtex1, ivec2(gl_FragCoord.xy), 0).x < 1.0){ discard; return;}
+        float velocity = clamp(1.0 - length(OVERDRAW_PREVENTION_SCALE),1e-6,1.0);
+        if(length(playerPos) < clamp(far-16.0*4.0, 16.0, maxOverdrawDistance)*velocity || texelFetch(depthtex1, ivec2(gl_FragCoord.xy), 0).x < 1.0){ discard; return;}
+    #else
+        if(texelFetch(depthtex1, ivec2(gl_FragCoord.xy), 0).x < 1.0){ discard; return;}
     #endif
 
 	

@@ -156,6 +156,7 @@ uniform float waterEnteredAltitude;
 
 uniform float dhVoxyNearPlane;
 uniform float dhVoxyFarPlane;
+uniform vec3 OVERDRAW_PREVENTION_SCALE;
 
 #include "/lib/util.glsl"
 #include "/lib/Shadow_Params.glsl"
@@ -1194,7 +1195,8 @@ if (gl_FragCoord.x * texelSize.x < 1.0  && gl_FragCoord.y * texelSize.y < 1.0 )	
 			float maxOverdrawDistance = OVERDRAW_MAX_DISTANCE;
 		#endif
 	 
-		bool WATER = texelFetch(colortex7, ivec2(gl_FragCoord.xy), 0).a > 0.0 && length(feetPlayerPos) > clamp(far-16.0*4.0, 16.0, maxOverdrawDistance) && texelFetch(depthtex1, ivec2(gl_FragCoord.xy), 0).x >= 1.0;
+		float velocity = clamp(1.0 - length(OVERDRAW_PREVENTION_SCALE),1e-6,1.0);
+		bool WATER = texelFetch(colortex7, ivec2(gl_FragCoord.xy), 0).a > 0.0 && length(feetPlayerPos) > clamp(far-16.0*4.0, 16.0, maxOverdrawDistance)*velocity && texelFetch(depthtex1, ivec2(gl_FragCoord.xy), 0).x >= 1.0;
 
 		if(WATER && isWater) {
 			gl_FragData[0].a = 0.0;
