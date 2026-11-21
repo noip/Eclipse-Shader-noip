@@ -390,6 +390,7 @@ float ld(float dist) {
 
 
 #include "/lib/sky_gradient.glsl"
+#include "/lib/PhotonGTAO.glsl"
 
 /* RENDERTARGETS:3,14,9*/
 
@@ -488,15 +489,33 @@ void main() {
 	else
 		gl_FragData[2] = vec4(encodedRain, 1.0, 1.0);
 
+	bool isLOD = z >= 1.0;
+
 	#if indirect_effect == SSAO_FILTERED || indirect_effect == SSAO_HQ
 
-		if(z >= 1.0) FlatNormals = normal;
+		if(isLOD) FlatNormals = normal;
 
 		vec2 SSAO_SSS = vec2(1.0,0.0);
 
 		if(!isSky && !opaqueParticles) {
 			SSAO_SSS = SSAO(viewPos, worldToView(normal), worldToView(FlatNormals), hand, noise);
 			SSAO_SSS.y = clamp(SSAO_SSS.y + 0.5 * lightmap.y*lightmap.y,0.0,1.0);
+		}
+
+		gl_FragData[1].xy = SSAO_SSS;
+	#elif indirect_effect == GTAO
+		vec2 SSAO_SSS = vec2(1.0,0.0);
+
+		#if (defined DISTANT_HORIZONS && defined DH_AMBIENT_OCCLUSION) || (defined VOXY && defined VOXY_AMBIENT_OCCLUSION)
+			bool allowLOD_AO = true;
+		#else
+			bool allowLOD_AO = !isLOD;
+		#endif
+
+		if(!isSky && !opaqueParticles && allowLOD_AO) {
+			vec2 r2 = fract(R2_samples((frameCounter*8)%40000) + blueNoise(gl_FragCoord.xy).rg);
+			float getGTAO = !hand ? ambient_occlusion(toClipSpace3_DH(viewPos, isLOD), viewPos, worldToView(normal), r2, isLOD) : 1.0;
+			SSAO_SSS = vec2(getGTAO, 0.0);
 		}
 
 		gl_FragData[1].xy = SSAO_SSS;
