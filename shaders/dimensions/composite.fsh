@@ -298,7 +298,7 @@ float convertHandDepth_2(in float depth, bool hand) {
 #endif
 
 vec2 SSAO(
-	vec3 viewPos, vec3 normal, vec3 flatnormal, bool hand, float noise
+	vec3 viewPos, vec3 normal, vec3 flatnormal, bool hand, float noise, float lightmap
 ){
 	int samples = 7;
 	float occlusion = 0.0; 
@@ -349,11 +349,15 @@ vec2 SSAO(
 				float threshHold = max(1.0 - viewPosDiffSquared/depthCancelation, 0.0);
 
 				n += 1.0;
-				float preAo = 1.0 - clamp(dot(normViewPosDiff, flatnormal)*25.0,0.0,1.0);
-				occlusion += max(0.0, dot(normViewPosDiff, normal) - preAo) * threshHold;
+				float viewDotFnorm = dot(normViewPosDiff, flatnormal);
+				occlusion += max(0.0, dot(normViewPosDiff, normal) - (1.0 - clamp(viewDotFnorm*25.0,0.0,1.0))) * threshHold;
 				
 				#ifdef Ambient_SSS
-					sss += clamp(-dot(normViewPosDiff, flatnormal) - occlusion/n,0.0,1.0) * 0.25 + (normalize(mat3(gbufferModelViewInverse) * -viewPosDiff).y - occlusion/n) * threshHold;
+					#ifdef OLD_SSS_MODE
+						sss += clamp(-viewDotFnorm - occlusion/n,0.0,1.0) * 0.25 + ((mat3(gbufferModelViewInverse) * -normViewPosDiff).y - occlusion/n) * threshHold;
+					#else
+						sss += ((mat3(gbufferModelViewInverse) * -normViewPosDiff).y - lightmap)*threshHold - viewDotFnorm*0.25;
+					#endif
 				#endif
 
 			}
@@ -498,8 +502,12 @@ void main() {
 		vec2 SSAO_SSS = vec2(1.0,0.0);
 
 		if(!isSky && !opaqueParticles) {
-			SSAO_SSS = SSAO(viewPos, worldToView(normal), worldToView(FlatNormals), hand, noise);
-			SSAO_SSS.y = clamp(SSAO_SSS.y + 0.5 * lightmap.y*lightmap.y,0.0,1.0);
+			SSAO_SSS = SSAO(viewPos, worldToView(normal), worldToView(FlatNormals), hand, noise, 1.0 - pow(lightmap.y, 1.5));
+			#ifdef OLD_SSS_MODE
+				SSAO_SSS.y = clamp(SSAO_SSS.y + 0.5 * lightmap.y*lightmap.y,0.0,1.0);
+			#else
+				SSAO_SSS.y = clamp(SSAO_SSS.y*0.5 + 0.5, 0.0, 1.0);
+			#endif
 		}
 
 		gl_FragData[1].xy = SSAO_SSS;
@@ -534,7 +542,7 @@ void main() {
 
 		float LabSSS = clamp((-64.0 + SpecularTex.z * 255.0) / 191.0 ,0.0,1.0);
 
-		float NdotL = clamp(dot(normal, sunVec),0.0,1.0);
+		float NdotL = clamp(dot(FlatNormals, sunVec),0.0,1.0);
 		if(opaqueParticles) NdotL = mix(0.5, 1.0, NdotL);
 
 		#ifdef END_SHADER
@@ -544,7 +552,7 @@ void main() {
 		#endif
 		float maxshadowfilt = Max_Shadow_Filter_Radius;
 
-		#ifdef BASIC_SHADOW_FILTER
+		#if defined BASIC_SHADOW_FILTER && !defined Variable_Penumbra_Shadows
 			if (LabSSS > 0.0 && NdotL < 0.001){  
 				minshadowfilt = 50;
 			//  maxshadowfilt = 50;
