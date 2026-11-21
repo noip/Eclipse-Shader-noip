@@ -11,7 +11,7 @@ const ivec3 workGroups = ivec3(6, 6, 1);
     const vec3 LightColor_Amethyst = vec3(0.464, 0.227, 0.788);
     const vec3 LightColor_Candles = vec3(1.0, 0.4, 0.1);
     const vec3 LightColor_CopperBulb = vec3(1.0, 0.7, 0.6);
-    const vec3 LightColor_LightBlock = vec3(0.7);
+    const vec3 LightColor_LightBlock = vec3(LIGHT_BLOCK_R, LIGHT_BLOCK_G, LIGHT_BLOCK_B);
     const vec3 LightColor_RedstoneTorch = vec3(0.939, 0.305, 0.164);
     const vec3 LightColor_SeaPickle = vec3(0.283, 0.394, 0.212);
 
@@ -1004,19 +1004,27 @@ void main() {
                 break;
 
             case BLOCK_DOOR_N:
-                mixMask = BuildLpvMask(0u, 1u, 1u, 1u, 1u, 1u);
+                #ifdef DOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(0u, 1u, 1u, 1u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_DOOR_E:
-                mixMask = BuildLpvMask(1u, 0u, 1u, 1u, 1u, 1u);
+                #ifdef DOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 0u, 1u, 1u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_DOOR_S:
-                mixMask = BuildLpvMask(1u, 1u, 0u, 1u, 1u, 1u);
+                #ifdef DOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 1u, 0u, 1u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_DOOR_W:
-                mixMask = BuildLpvMask(1u, 1u, 1u, 0u, 1u, 1u);
+                #ifdef DOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 1u, 1u, 0u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
 
@@ -1037,27 +1045,39 @@ void main() {
                 break;
 
             case BLOCK_TRAPDOOR_BOTTOM:
-                mixMask = BuildLpvMask(1u, 1u, 1u, 1u, 1u, 0u);
+                #ifdef TRAPDOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 1u, 1u, 1u, 1u, 0u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_TRAPDOOR_TOP:
-                mixMask = BuildLpvMask(1u, 1u, 1u, 1u, 0u, 1u);
+                #ifdef TRAPDOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 1u, 1u, 1u, 0u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_TRAPDOOR_N:
-                mixMask = BuildLpvMask(0u, 1u, 1u, 1u, 1u, 1u);
+                #ifdef TRAPDOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(0u, 1u, 1u, 1u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_TRAPDOOR_E:
-                mixMask = BuildLpvMask(1u, 0u, 1u, 1u, 1u, 1u);
+                #ifdef TRAPDOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 0u, 1u, 1u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_TRAPDOOR_S:
-                mixMask = BuildLpvMask(1u, 1u, 0u, 1u, 1u, 1u);
+                #ifdef TRAPDOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 1u, 0u, 1u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
             case BLOCK_TRAPDOOR_W:
-                mixMask = BuildLpvMask(1u, 1u, 1u, 0u, 1u, 1u);
+                #ifdef TRAPDOORS_BLOCK_LIGHT
+                    mixMask = BuildLpvMask(1u, 1u, 1u, 0u, 1u, 1u);
+                #endif
                 mixWeight = 0.8;
                 break;
         }
