@@ -25,6 +25,7 @@ out DATA {
 
 #if defined IS_LPV_ENABLED || defined END_ISLAND_LIGHT || (WATER_INTERACTION == 2 && IRIS_VERSION < 11004) || defined SHADER_GRASS
 	uniform int renderStage;
+	uniform mat4 gbufferModelViewInverse;
 	uniform mat4 shadowModelViewInverse;
 	uniform int entityId;
 

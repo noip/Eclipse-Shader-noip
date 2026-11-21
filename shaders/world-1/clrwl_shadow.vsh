@@ -28,6 +28,7 @@ Read the terms of modification and sharing before changing something below pleas
 	#endif
 	in vec3 vaPosition;
 
+	uniform mat4 gbufferModelViewInverse;
 	uniform mat4 shadowModelViewInverse;
 	
 	uniform int renderStage;

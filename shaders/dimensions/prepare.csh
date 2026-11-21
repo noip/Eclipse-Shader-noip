@@ -4,6 +4,8 @@ layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 const ivec3 workGroups = ivec3(1, 1, 1);
 
 uniform vec3 previousCameraPosition;
+uniform mat4 gbufferModelViewInverse;
+uniform mat4 gbufferPreviousModelView;
 
 #include "/lib/util.glsl"
 uniform vec3 cameraPosition;

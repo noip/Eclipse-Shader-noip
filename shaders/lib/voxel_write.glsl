@@ -4,7 +4,8 @@ ivec3 GetVoxelIndex(const in vec3 playerPos) {
 	#else
 		vec3 cameraOffset = fract(cameraPosition);
 	#endif
-	return ivec3(floor(playerPos + cameraOffset) + VoxelSize3/2u);
+	vec3 viewDir = gbufferModelViewInverse[2].xyz;
+	return ivec3(floor(playerPos + cameraOffset)) + GetVoxelCenter(viewDir);
 }
 
 // ivec3 GetVoxelIndex2(const in vec3 playerPos) {
@@ -17,7 +18,7 @@ ivec3 GetVoxelIndex(const in vec3 playerPos) {
 // }
 
 void SetVoxelBlock(const in ivec3 voxelPos, const in uint blockId) {
-	if (clamp(voxelPos, ivec3(0), ivec3(VoxelSize-1u)) != voxelPos) return;
+	if (!InVoxelBounds(voxelPos)) return;
 	
 	// imageStore(imgQuarterVoxelMask, voxelPos / 4, uvec4(1u));
 

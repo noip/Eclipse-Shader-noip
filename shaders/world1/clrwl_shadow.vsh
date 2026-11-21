@@ -21,6 +21,7 @@ Read the terms of modification and sharing before changing something below pleas
 */
 #if defined IS_LPV_ENABLED || defined END_ISLAND_LIGHT
 	uniform int renderStage;
+	uniform mat4 gbufferModelViewInverse;
 	uniform mat4 shadowModelViewInverse;
 	uniform int entityId;
 

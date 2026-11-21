@@ -79,13 +79,12 @@ uniform float nightVision;
 
 uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;
+uniform mat4 gbufferPreviousModelView;
 uniform vec3 cameraPosition;
+uniform vec3 previousCameraPosition;
 uniform vec2 texelSize;
 
 #if defined HAND
-	uniform mat4 gbufferPreviousModelView;
-	uniform vec3 previousCameraPosition;
-
 	float detectCameraMovement(){
 		// simply get the difference of modelview matrices and cameraPosition across a frame.
 		vec3 fakePos = vec3(0.5,0.5,0.0);

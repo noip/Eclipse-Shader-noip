@@ -902,6 +902,16 @@ uniform float wetness;
 			3 = only full wetness
 		*/
 
+		#ifdef IS_LPV_ENABLED
+			vec3 lpvPos = GetLpvPosition(worldPos - cameraPosition) + 0.5 * flatNormals;
+			vec3 lpvFade = clamp(min((vec3(LpvSize3) - 1.0 - lpvPos) * 0.25, lpvPos * 0.25), 0.0, 1.0);
+			float lpvBounds = lpvFade.x * lpvFade.y * lpvFade.z;
+			float skyLightMask = SampleLpvLinear(lpvPos).a * lpvBounds;
+			float skyLightMax = 1.0 - (3.0 / 15.0) * skyLightMask;
+
+			lightmap = min(lightmap, skyLightMax);
+		#endif
+
 		float effectStrength = smoothstep(0.85, 1.0, lightmap);
 		//float effectStrength = smoothstep(0.85, 1.0, max(lightmap.y-step(1.0,lightmap.x), 0.0));
 		vec2 snowCoords = worldPos.xz*0.1;
@@ -976,6 +986,10 @@ uniform float wetness;
 				}
 
 				roughness = mix(roughness, 0.5*(1.0+snowR), wetnessStages * Puddle_Reflection_Sharpness);
+
+				#ifdef IS_LPV_ENABLED
+					wetnessDarkening *= 1.0 - smoothstep(0.6, 0.9, skyLightMask);
+				#endif
 
 				if(f0 < 229.5/255.0 ) albedo = pow(albedo * (1.0 - 0.08*wetnessDarkening), vec3(1.0 + 0.7*wetnessDarkening));
 			}

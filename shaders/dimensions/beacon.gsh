@@ -43,7 +43,8 @@ ivec3 GetVoxelIndex(const in vec3 playerPos) {
 	#else
 		vec3 cameraOffset = fract(cameraPosition);
 	#endif
-	return ivec3(floor(playerPos + cameraOffset) + VoxelSize3/2u);
+	vec3 viewDir = gbufferModelViewInverse[2].xyz;
+	return ivec3(floor(playerPos + cameraOffset)) + GetVoxelCenter(viewDir);
 }
 
 void SetVoxelBlock(const in ivec3 voxelPos, const in uint blockId) {
