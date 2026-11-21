@@ -340,10 +340,20 @@ vec3 closestToCamera5taps_DH(vec2 texcoord, sampler2D depth, sampler2D dhDepth, 
 	return dmin;
 }
 
+// TAA_TEXTURE_FILTERING_MODES
+#define NEAREST_ONLY 0
+#define LINEAR_ONLY 1
+#define NEAREST_AND_LINEAR 2
+
 vec4 computeTAA(vec2 texcoord, bool hand){
 
 	vec2 jitter = offsets[framemod8]*texelSize*0.5;
-	vec2 adjTC = clamp(texcoord*RENDER_SCALE - texelSize*0.5, vec2(0.0), RENDER_SCALE- texelSize*1.5);
+	vec2 adjTC = texcoord*RENDER_SCALE;
+	// when linear filtering is used, ensure it samples center of pixel
+	#if TAA_TEXTURE_FILTERING_MODE == LINEAR_ONLY || TAA_TEXTURE_FILTERING_MODE == NEAREST_AND_LINEAR || defined TAA_UPSCALING
+		adjTC -= texelSize*0.5;
+	#endif
+	adjTC = clamp(adjTC, vec2(0.0), RENDER_SCALE - texelSize*1.5);
 	vec2 adjTC_noJitter = adjTC + jitter;
 
 	// get previous frames position stuff for UV	
@@ -367,11 +377,11 @@ vec4 computeTAA(vec2 texcoord, bool hand){
 	#endif
 
 	vec2 velocity = previousPosition.xy - closestToCamera.xy;
-	
 	previousPosition.xy = texcoord + (hand ? vec2(0.0) : velocity);
+	float cameraMovement = length(velocity/texelSize);
 	
 	// sample current frame, and make sure it is de-jittered
-	#ifdef TAA_UPSCALING
+	#if defined TAA_UPSCALING || TAA_TEXTURE_FILTERING_MODE == LINEAR_ONLY
 		vec3 currentFrame = smoothfilter(colortex3, adjTC_noJitter).rgb;
 	#else
 		vec3 currentFrame = texelFetch(colortex3, ivec2(adjTC_noJitter/texelSize), 0).rgb;
@@ -380,28 +390,44 @@ vec4 computeTAA(vec2 texcoord, bool hand){
 	//reject history if off-screen and early exit
 	if (previousPosition.x < 0.0 || previousPosition.y < 0.0 || previousPosition.x > 1.0 || previousPosition.y > 1.0) return vec4(currentFrame, 1.0);
 
+	// variance clip: https://developer.download.nvidia.com/gameworks/events/GDC2016/msalvi_temporal_supersampling.pdf
+	float tuner = VARIANCE_CLIP_GAMMA_VAR;
 	#ifdef TAA_UPSCALING
-		// Interpolating neighboorhood clampling boundaries between pixels
-		vec3 colMax = texture(colortex0, adjTC).rgb;
-		vec3 colMin = texture(colortex6, adjTC).rgb;
+		vec3 momentsA = texture(colortex0, adjTC_noJitter).rgb;
+		vec3 momentsB = texture(colortex6, adjTC_noJitter).rgb;
+		vec3 standardDev = sqrt(max(momentsB - momentsA*momentsA, 0.0));
+
+		vec3 colMin = max(momentsA - tuner*standardDev, vec3(0.0));
+		vec3 colMax = momentsA + tuner*standardDev;
 	#else
-		//Assuming the history color is a blend of the 3x3 neighborhood, we clamp the history to the min and max of each channel in the 3x3 neighborhood
-		vec3 col0 = currentFrame; // can use this because its the center sample.
-		vec3 col1 = texture(colortex3, adjTC_noJitter + vec2( texelSize.x,	 texelSize.y)).rgb;
-		vec3 col2 = texture(colortex3, adjTC_noJitter + vec2( texelSize.x,	-texelSize.y)).rgb;
-		vec3 col3 = texture(colortex3, adjTC_noJitter + vec2(-texelSize.x,	-texelSize.y)).rgb;
-		vec3 col4 = texture(colortex3, adjTC_noJitter + vec2(-texelSize.x,	 texelSize.y)).rgb;
-		vec3 col5 = texture(colortex3, adjTC_noJitter + vec2( 0.0,			 texelSize.y)).rgb;
-		vec3 col6 = texture(colortex3, adjTC_noJitter + vec2( 0.0,			-texelSize.y)).rgb;
-		vec3 col7 = texture(colortex3, adjTC_noJitter + vec2(-texelSize.x,	 		 0.0)).rgb;
-		vec3 col8 = texture(colortex3, adjTC_noJitter + vec2( texelSize.x,	 		 0.0)).rgb;
+		#if TAA_TEXTURE_FILTERING_MODE == LINEAR_ONLY || TAA_TEXTURE_FILTERING_MODE == NEAREST_AND_LINEAR
+			vec3 col0 = texture(colortex3, adjTC_noJitter).rgb;
+			vec3 col1 = texture(colortex3, adjTC_noJitter + vec2( texelSize.x,	 texelSize.y)).rgb;
+			vec3 col2 = texture(colortex3, adjTC_noJitter + vec2( texelSize.x,	-texelSize.y)).rgb;
+			vec3 col3 = texture(colortex3, adjTC_noJitter + vec2(-texelSize.x,	-texelSize.y)).rgb;
+			vec3 col4 = texture(colortex3, adjTC_noJitter + vec2(-texelSize.x,	 texelSize.y)).rgb;
+			vec3 col5 = texture(colortex3, adjTC_noJitter + vec2( 0.0,			 texelSize.y)).rgb;
+			vec3 col6 = texture(colortex3, adjTC_noJitter + vec2( 0.0,			-texelSize.y)).rgb;
+			vec3 col7 = texture(colortex3, adjTC_noJitter + vec2(-texelSize.x,	 		 0.0)).rgb;
+			vec3 col8 = texture(colortex3, adjTC_noJitter + vec2( texelSize.x,	 		 0.0)).rgb;
+		#else
+			vec3 col0 = texelFetch(colortex3, ivec2(adjTC_noJitter/texelSize), 0).rgb;
+			vec3 col1 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2( texelSize.x,	 texelSize.y))/texelSize), 0).rgb;
+			vec3 col2 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2( texelSize.x,	-texelSize.y))/texelSize), 0).rgb;
+			vec3 col3 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2(-texelSize.x,	-texelSize.y))/texelSize), 0).rgb;
+			vec3 col4 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2(-texelSize.x,	 texelSize.y))/texelSize), 0).rgb;
+			vec3 col5 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2( 0.0,			 texelSize.y))/texelSize), 0).rgb;
+			vec3 col6 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2( 0.0,			-texelSize.y))/texelSize), 0).rgb;
+			vec3 col7 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2(-texelSize.x,	 		 0.0))/texelSize), 0).rgb;
+			vec3 col8 = texelFetch(colortex3, ivec2((adjTC_noJitter + vec2( texelSize.x,	 		 0.0))/texelSize), 0).rgb;
+		#endif
 
-		vec3 colMax = max(col0,max(col1,max(col2,max(col3, max(col4, max(col5, max(col6, max(col7, col8))))))));
-		vec3 colMin = min(col0,min(col1,min(col2,min(col3, min(col4, min(col5, min(col6, min(col7, col8))))))));
-		
-		colMin = 0.5 * (colMin + min(col0,min(col5,min(col6,min(col7,col8)))));
-		colMax = 0.5 * (colMax + max(col0,max(col5,max(col6,max(col7,col8)))));
+		vec3 momentsA = (col0+col1+col2+col3+col4+col5+col6+col7+col8)/9.0;
+		vec3 momentsB = (col0*col0+col1*col1+col2*col2+col3*col3+col4*col4+col5*col5+col6*col6+col7*col7+col8*col8)/9.0;
+		vec3 standardDev = sqrt(max(momentsB - momentsA*momentsA, 0.0));
 
+		vec3 colMin = max(momentsA - tuner*standardDev, vec3(0.0));
+		vec3 colMax = momentsA + tuner*standardDev;
 	#endif
 	
     #ifdef DAMAGE_TAKEN_EFFECT
@@ -410,17 +436,16 @@ vec4 computeTAA(vec2 texcoord, bool hand){
 		if(criticalDamageTaken) previousPosition.xy = texcoord;
 	#endif
 
-	vec3 frameHistory = max(FastCatmulRom(colortex5, previousPosition.xy, vec4(texelSize, 1.0/texelSize), 0.75).xyz,0.0);
+	vec3 frameHistory = max(FastCatmulRom(colortex5, previousPosition.xy, vec4(texelSize, 1.0/texelSize), 0.75).xyz, 1e-7);
 	vec3 clampedframeHistory = clamp(frameHistory, colMin, colMax);
+
+	// return the first moments instead of history if the difference across frames in the neighborhood is enough for it. helps reduce ghosting without looking too grainy/flickery
+	clampedframeHistory = mix(clampedframeHistory, momentsA, clamp(abs(clampedframeHistory - frameHistory)/max(clampedframeHistory, vec3(1e-7)), 0.0, 1.0));
 
 	float blendingFactor = BLEND_FACTOR;
 	
-	float cameraMovement = length(velocity/texelSize);
 	blendingFactor = clamp(cameraMovement, blendingFactor, BLEND_FACTOR_DURING_MOVEMENT);
 	if(hand) blendingFactor = clamp(cameraMovement, blendingFactor, 1.0);
-	
-	////// Increases blending factor when far from AABB, reduces ghosting
-	blendingFactor = clamp(blendingFactor + luma(abs(clampedframeHistory - frameHistory)/clampedframeHistory),0.0,1.0);
 	
 	////// Blend current pixel with clamped history, apply fast tonemap beforehand to reduce flickering
 	vec3 finalResult = invTonemap(mix(tonemap(clampedframeHistory), tonemap(currentFrame), blendingFactor));

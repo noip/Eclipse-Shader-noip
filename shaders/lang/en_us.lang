@@ -784,6 +784,11 @@ screen.Post_Processing = Post Processing
         option.SCALE_FACTOR = Scale Factor
             prefix.SCALE_FACTOR = §fUpscale from 
             suffix.SCALE_FACTOR = x §fof the window resolution
+        option.TAA_TEXTURE_FILTERING_MODE = Sampler Filter Mode
+            value.TAA_TEXTURE_FILTERING_MODE.0 = Nearest Neighbor §bⓘ Sharpest but Grainy§r
+            value.TAA_TEXTURE_FILTERING_MODE.1 = Linear §bⓘ Cleanest but slightly blurry§r
+            value.TAA_TEXTURE_FILTERING_MODE.2 = Nearest (current frame) + Linear (neighborhood sampling)
+        option.VARIANCE_CLIP_GAMMA_VAR = Variance Clip Tuning
 	screen.COLOR_GRADING = Color Grading
 		option.LUMINANCE_CURVE = Tone Curve
 		option.LOWER_CURVE = Lower Curve
@@ -1219,6 +1224,8 @@ screen.Post_Processing.comment = Configure settings for all post processing effe
         option.BLEND_FACTOR.comment = Configure how much of frame history is used. high numbers means it relies less on frame history, so it may look flickery and noisy. low numbers rely more on frame history, so it may look less noisy, but more smudged with more trailing.
         option.TAA_UPSCALING.comment = Toggle temporal upscaling. This retains a good amount of quality from a lower resolution image when it upscales. so you can still have a high looking resolution compared to typical upsampling and still have better performance.
         option.SCALE_FACTOR.comment = Configure from what fraction of your resolution to upscale from - §abelow 0.50x is not recommended, it is only allowed for fun!§r
+        option.TAA_TEXTURE_FILTERING_MODE.comment = Configure the texture filtering used for TAA.
+        option.VARIANCE_CLIP_GAMMA_VAR.comment = Variance Clipping restricts TAA history to reduce ghosting or trailing motion artifacts. Low values reduce trailing but flicker more; high values are cleaner/more stable with slightly more trailing.
 
         
 	screen.COLOR_GRADING.comment = Advanced color grading options
