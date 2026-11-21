@@ -266,6 +266,11 @@ float encodeVec2(vec2 a){
 float encodeVec2(float x,float y){
     return encodeVec2(vec2(x,y));
 }
+vec2 decodeVec2(float a){
+    const vec2 constant1 = 65535. / vec2( 256., 65536.);
+    const float constant2 = 256. / 255.;
+    return fract( a * constant1 ) * constant2 ;
+}
 vec3 applyBump(mat3 tbnMatrix, vec3 bump, float puddle_values){
 	float bumpmult = puddle_values;
 	bump = bump * vec3(bumpmult, bumpmult, bumpmult) + vec3(0.0f, 0.0f, 1.0f - bumpmult);
@@ -511,10 +516,10 @@ if (gl_FragCoord.x * texelSize.x < 1.0  && gl_FragCoord.y * texelSize.y < 1.0 )	
 	
 	vec4 blockBreak = texelFetch(colortex11, ivec2(gl_FragCoord.xy), 0);
 
-	if(blockBreak.a > 0.99) {
+	if(decodeVec2(blockBreak.a).g > 0.99) {
 		gl_FragData[2] = blockBreak;
 	} else {
-		gl_FragData[2] = vec4(0.0, encodeVec2(GLASS_TINT_COLORS.rg), encodeVec2(GLASS_TINT_COLORS.ba), 0.5);
+		gl_FragData[2] = vec4(encodeVec2(vec2(0.5)), encodeVec2(vec2(0.5, GLASS_TINT_COLORS.r)), encodeVec2(GLASS_TINT_COLORS.gb), encodeVec2(vec2(GLASS_TINT_COLORS.a, 0.5)));
 	}
 
 	gl_FragData[3] = vec4(1, 1, encodeVec2(lightmapCoords.x, lightmapCoords.y), 1);

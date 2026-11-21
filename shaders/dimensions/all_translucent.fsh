@@ -314,6 +314,28 @@ vec3 applyBump(mat3 tbnMatrix, vec3 bump, float mult, vec3 rippleBump){
 	return normalize(bump*tbnMatrix);
 }
 
+vec3 allocatePrecision_TangentNormal(vec3 normals){
+	vec3 newNormal = normals;
+
+	if(normals.x < 0.0) {
+		newNormal.x = -sqrt(1.0-pow(1.0-clamp(-newNormal.x,0.0,1.0),2.0));
+	}else{
+		newNormal.x =  sqrt(1.0-pow(1.0-clamp( newNormal.x,0.0,1.0),2.0));
+	}
+	if(normals.y < 0.0) {
+		newNormal.y = -sqrt(1.0-pow(1.0-clamp(-newNormal.y,0.0,1.0),2.0));
+	}else{
+		newNormal.y =  sqrt(1.0-pow(1.0-clamp( newNormal.y,0.0,1.0),2.0));
+	}
+	if(normals.z < 0.0) {
+		newNormal.z = -sqrt(1.0-pow(1.0-clamp(-newNormal.z,0.0,1.0),2.0));
+	}else{
+		newNormal.z =  sqrt(1.0-pow(1.0-clamp( newNormal.z,0.0,1.0),2.0));
+	}
+
+	return clamp(newNormal + newNormal*(interleaved_gradientNoise_temporal()-0.5)*0.015,-1.0,1.0);
+}
+
 vec2 CleanSample(
 	int samples, float totalSamples, float noise
 ){
@@ -909,21 +931,32 @@ if (gl_FragCoord.x * texelSize.x < 1.0  && gl_FragCoord.y * texelSize.y < 1.0 )	
 		if (isWater) TangentNormal = mix(NormalTex.xy, normalize(waveNormal).xz, physics_localWaviness_fade);
 	#endif
 
-	gl_FragData[2].r = encodeVec2(TangentNormal*0.5+0.5);
+	// write with a curve applied to the 3D view-space normal delta to put denser bits where finer detail is needed, then dither
+	vec3 refractNormalEncoded = allocatePrecision_TangentNormal(-normalMat.xyz + normal.xyz)*0.5+0.5;
 
 	vec4 blockBreak = texelFetch(colortex11, ivec2(gl_FragCoord.xy), 0);
 
-	if(blockBreak.a > 0.99) {
-		gl_FragData[2].gba = blockBreak.gba;
+	if(decodeVec2(blockBreak.a).g > 0.99) {
+		gl_FragData[2] = vec4(
+			encodeVec2(refractNormalEncoded.xy),
+			encodeVec2(vec2(refractNormalEncoded.z, decodeVec2(blockBreak.g).g)),
+			blockBreak.b,
+			blockBreak.a
+		);
 	} else {
 		#if defined ENTITIES && defined IS_IRIS
 			float nameTagMask = 0.0;
-			if(NAMETAG == 1) nameTagMask = 1.0;
+			if(NAMETAG == 1) nameTagMask = 0.1;
 		#else
 			const float nameTagMask = 0.0;
 		#endif
 
-		gl_FragData[2].gba = vec3(encodeVec2(GLASS_TINT_COLORS.rg), encodeVec2(GLASS_TINT_COLORS.ba), nameTagMask);
+		gl_FragData[2] = vec4(
+			encodeVec2(refractNormalEncoded.xy),
+			encodeVec2(vec2(refractNormalEncoded.z, GLASS_TINT_COLORS.r)),
+			encodeVec2(GLASS_TINT_COLORS.gb),
+			encodeVec2(vec2(GLASS_TINT_COLORS.a, nameTagMask))
+		);
 	}
 
 ////////////////////////////////////////////////////////////////////////////////
